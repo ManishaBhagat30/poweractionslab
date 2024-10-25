@@ -1,0 +1,137 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline-1": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "cap_ConDocSPO"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_a_file_is_created_(properties_only)": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+              "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetOnNewFileItems",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "recurrence": {
+            "interval": 5,
+            "frequency": "Minute"
+          },
+          "splitOn": "@triggerOutputs()?['body/value']",
+          "metadata": {
+            "operationMetadataId": "7e6498dd-896b-471d-b030-b9630048d903"
+          }
+        }
+      },
+      "actions": {
+        "Condition_-_Check_if_Content_Type__=_Controlled_Document": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "contains": [
+                  "@triggerBody()?['{ContentType}']?['Id']",
+                  "0x01010085D0224DAD38F54498AD6D5B9A70E4D800012F2FE34208904CAA6264F48E17318A"
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Get_item_from_Register": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                  "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+                  "id": "@triggerBody()?['RegisterID']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_sharepointonline-1"
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "b0c7e2f5-c7a6-42cc-85ba-13785f5ce3e4"
+              }
+            },
+            "Create_item_in_Auditing_Log": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                  "table": "87a22fab-9d3a-47e4-b2c8-dd0087e118f6",
+                  "item/Title": "@body('Get_item_from_Register')?['Title']",
+                  "item/Document_x0020_Version": "@triggerBody()?['{VersionNumber}']",
+                  "item/Status/Value": "New Document",
+                  "item/WorkingDocumentID": "@triggerBody()?['ID']",
+                  "item/Link_x0020_to_x0020_Document": "@triggerBody()?['{Link}']",
+                  "item/Link_x0020_to_x0020_Folder": "@body('Get_item_from_Register')?['Link_x0020_to_x0020_Working_x002']",
+                  "item/Register_x0020_ID": "@triggerBody()?['RegisterID']",
+                  "item/LinktoRegister": "@body('Get_item_from_Register')?['{Link}']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "PostItem",
+                  "connectionName": "shared_sharepointonline-1"
+                }
+              },
+              "runAfter": {
+                "Get_item_from_Register": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "6e5b1984-9fb9-4ed7-92ef-b7a30b6959df"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Terminate": {
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Cancelled"
+                },
+                "metadata": {
+                  "operationMetadataId": "5545b955-1497-4fcd-91a3-d791fcfbb083"
+                }
+              }
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "48155983-0f5e-4e24-9ce0-c49fd2501725"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

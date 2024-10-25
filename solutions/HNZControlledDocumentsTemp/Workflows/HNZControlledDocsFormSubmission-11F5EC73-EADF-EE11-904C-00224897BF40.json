@@ -1,0 +1,417 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "cap_ConDocSPO"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_approvals-1": {
+        "api": {
+          "name": "shared_approvals"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "cap_sharedapprovals_ed737"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_office365-1": {
+        "api": {
+          "name": "shared_office365"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "cap_sharedoffice365_c9016"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "ConDocMainSiteURL (cr49f_ConDocMainSiteURl)": {
+          "defaultValue": "https://hockingba.sharepoint.com/teams/ControlledDocumentsMainSite",
+          "type": "String",
+          "metadata": {
+            "schemaName": "cr49f_ConDocMainSiteURl"
+          }
+        }
+      },
+      "triggers": {
+        "When_an_item_is_created": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "@parameters('ConDocMainSiteURL (cr49f_ConDocMainSiteURl)')",
+              "table": "a0dbbf6c-3d57-477f-9b44-ebe8d8df89e1"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetOnNewItems",
+              "connectionName": "shared_sharepointonline"
+            }
+          },
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Minute"
+          },
+          "splitOn": "@triggerOutputs()?['body/value']",
+          "metadata": {
+            "operationMetadataId": "58a81162-37c5-406f-863d-55f336c18a4b"
+          }
+        }
+      },
+      "actions": {
+        "Start_and_wait_for_an_approval": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "parameters": {
+              "approvalType": "BasicAwaitAll",
+              "WebhookApprovalCreationInput/title": "Controlled Documents Form Submission - Document Name: @{triggerBody()?['Title']}, ID: @{triggerBody()?['ID']}",
+              "WebhookApprovalCreationInput/assignedTo": "@variables('varOwner')",
+              "WebhookApprovalCreationInput/itemLink": "@triggerBody()?['{Link}']",
+              "WebhookApprovalCreationInput/itemLinkDescription": "This is a link to the Form Item",
+              "WebhookApprovalCreationInput/requestor": "@triggerBody()?['Author']?['Email']",
+              "WebhookApprovalCreationInput/enableNotifications": true,
+              "WebhookApprovalCreationInput/enableReassignment": true
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals",
+              "operationId": "StartAndWaitForAnApproval",
+              "connectionName": "shared_approvals-1"
+            }
+          },
+          "runAfter": {
+            "Compose_-_Convert_Review_Timeframe_to_INT": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "6307ba93-605e-4f6b-8b26-1fa589fc6992"
+          }
+        },
+        "Initialize_variable_-_Approval_Outcome": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varApprovalOutcome",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_-_Owner": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "a0f58ba3-9a8b-45af-9fae-33663274670f"
+          }
+        },
+        "Set_variable_-_Approval_Outcome": {
+          "type": "SetVariable",
+          "inputs": {
+            "name": "varApprovalOutcome",
+            "value": "@body('Start_and_wait_for_an_approval')?['outcome']"
+          },
+          "runAfter": {
+            "Start_and_wait_for_an_approval": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1cc6df94-48cb-47df-b386-4196a653012d"
+          }
+        },
+        "Condition": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@variables('varApprovalOutcome')",
+                  "Approve"
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "For_each_1": {
+              "type": "Foreach",
+              "foreach": "@outputs('Start_and_wait_for_an_approval')?['body']?['responses']",
+              "actions": {
+                "Update_item_-_Approved": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "@parameters('ConDocMainSiteURL (cr49f_ConDocMainSiteURl)')",
+                      "table": "a0dbbf6c-3d57-477f-9b44-ebe8d8df89e1",
+                      "id": "@triggerBody()?['ID']",
+                      "item/Title": "@triggerBody()?['Title']",
+                      "item/Status/Value": "Approved",
+                      "item/ApprovalComments": "@variables('varApprovalComments')",
+                      "item/Date_x0020_Approved": "@{utcNow()}",
+                      "item/Approved_x0020_by/Claims": "@items('For_each_1')?['responder']?['email']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchItem",
+                      "connectionName": "shared_sharepointonline"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "3578fdec-9e29-430f-a2af-fc586e8549b6"
+                  }
+                }
+              },
+              "metadata": {
+                "operationMetadataId": "ba8a9730-6b7e-4872-8d7e-e100c5a0271a"
+              }
+            },
+            "Create_item_-_Add_to_Register": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "@parameters('ConDocMainSiteURL (cr49f_ConDocMainSiteURl)')",
+                  "table": "13ce6645-f7da-4bd6-acf6-f0b90da6ca32",
+                  "item/Title": "@triggerBody()?['Title']",
+                  "item/Date_x0020_Authorised": "@body('Start_and_wait_for_an_approval')?['completionDate']",
+                  "item/ReviewTimeframe": "@outputs('Compose_-_Convert_Review_Timeframe_to_INT')",
+                  "item/Status/Value": "New Document",
+                  "item/Owner/Claims": "@triggerBody()?['HNZOwner']?['Claims']",
+                  "item/Facilitator/Claims": "@triggerBody()?['Facilitator']?['Claims']",
+                  "item/Authoriser/Claims": "@triggerBody()?['Authoriser']?['Claims']",
+                  "item/Document_x0020_Type/Value": "@triggerBody()?['HNZDocumentType']?['Value']",
+                  "item/HNZRegion/Value": "@outputs('Compose')",
+                  "item/Local_x0020_Area/Value": "@triggerBody()?['HNZLocalArea']?['Value']",
+                  "item/HNZBusinessUnit/Value": "@triggerBody()?['HNZBusinessUnit']?['Value']",
+                  "item/Appliesto/Value": "@triggerBody()?['Appliesto']?['Value']",
+                  "item/ExternalSourceName": "@triggerBody()?['ExternalSourceName']",
+                  "item/Facility": "@triggerBody()?['Facility']",
+                  "item/Work_x0020_Area_x0020_Created": false
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "PostItem",
+                  "connectionName": "shared_sharepointonline"
+                }
+              },
+              "runAfter": {
+                "For_each_1": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "fe5eb05a-27ed-4902-81c4-88f6fb7407d0"
+              }
+            },
+            "Update_item_-_Link_to_Register": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "@parameters('ConDocMainSiteURL (cr49f_ConDocMainSiteURl)')",
+                  "table": "a0dbbf6c-3d57-477f-9b44-ebe8d8df89e1",
+                  "id": "@triggerBody()?['ID']",
+                  "item/Title": "@triggerBody()?['Title']",
+                  "item/LinktoRegister": "@body('Create_item_-_Add_to_Register')?['{Link}']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "PatchItem",
+                  "connectionName": "shared_sharepointonline"
+                }
+              },
+              "runAfter": {
+                "Create_item_-_Add_to_Register": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "3578fdec-9e29-430f-a2af-fc586e8549b6"
+              }
+            },
+            "Send_an_email_-_New_item_added_to_register": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "emailMessage/To": "@triggerBody()?['Owner/Email']",
+                  "emailMessage/Subject": "A new Controlled Document () has been added to the register. Please review",
+                  "emailMessage/Body": "<p class=\"editor-paragraph\">Hi,</p><br><p class=\"editor-paragraph\">A new Controlled documents item has been added tothe Register. Click <a class=\"editor-link\" href=\"@{body('Update_item_-_Link_to_Register')?['{Link}']}\">here</a> to open the item.</p><p class=\"editor-paragraph\"></p><br><p class=\"editor-paragraph\">Some of the details are as below:</p><br><p class=\"editor-paragraph\"><b><strong style=\"font-family: Arial;\" class=\"editor-text-bold\">Document Type: </strong></b>@{body('Update_item_-_Link_to_Register')?['HNZDocumentType']?['Label']}</p><p class=\"editor-paragraph\"><b><strong style=\"font-family: Arial;\" class=\"editor-text-bold\">Region: </strong></b>@{body('Update_item_-_Link_to_Register')?['HNZRegion']?['Label']}</p><p class=\"editor-paragraph\"><b><strong style=\"font-family: Arial;\" class=\"editor-text-bold\">Local Area: </strong></b>@{body('Update_item_-_Link_to_Register')?['HNZLocalArea']?['Label']}</p><p class=\"editor-paragraph\"><b><strong style=\"font-family: Arial;\" class=\"editor-text-bold\">Business Unit: </strong></b>@{body('Update_item_-_Link_to_Register')?['HNZBusinessUnit']?['Label']}</p><p class=\"editor-paragraph\"><b><strong style=\"font-family: Arial;\" class=\"editor-text-bold\">Applies To: </strong></b>@{body('Update_item_-_Link_to_Register')?['Appliesto']?['Label']}</p><p class=\"editor-paragraph\"><b><strong style=\"font-family: Arial;\" class=\"editor-text-bold\">Document Owner</strong></b><span style=\"font-family: Arial;\">: </span>@{body('Update_item_-_Link_to_Register')?['HNZOwner']?['DisplayName']}</p><p class=\"editor-paragraph\"><b><strong style=\"font-family: Arial;\" class=\"editor-text-bold\">Requested by:</strong></b><span style=\"font-family: Arial;\"> </span>@{body('Update_item_-_Link_to_Register')?['Author']?['DisplayName']}</p>",
+                  "emailMessage/Importance": "Normal"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                  "operationId": "SendEmailV2",
+                  "connectionName": "shared_office365-1"
+                }
+              },
+              "runAfter": {
+                "Update_item_-_Link_to_Register": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "01383f3b-40d3-41dc-b2ab-0ba86501b0c1"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "For_each_2": {
+                "type": "Foreach",
+                "foreach": "@outputs('Start_and_wait_for_an_approval')?['body']?['responses']",
+                "actions": {
+                  "Update_item_-_Rejected": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "dataset": "@parameters('ConDocMainSiteURL (cr49f_ConDocMainSiteURl)')",
+                        "table": "a0dbbf6c-3d57-477f-9b44-ebe8d8df89e1",
+                        "id": "@triggerBody()?['ID']",
+                        "item/Title": "@triggerBody()?['Title']",
+                        "item/Status/Value": "Declined",
+                        "item/ApprovalComments": "@variables('varApprovalComments')",
+                        "item/Date_x0020_Approved": "@{utcNow()}",
+                        "item/Approved_x0020_by/Claims": "@items('For_each_2')?['responder']?['email']"
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                        "operationId": "PatchItem",
+                        "connectionName": "shared_sharepointonline"
+                      }
+                    },
+                    "metadata": {
+                      "operationMetadataId": "667d47c6-c0d5-41ae-b652-b71f5adc336a"
+                    }
+                  }
+                },
+                "metadata": {
+                  "operationMetadataId": "35912317-83e7-458d-be67-6c8133595032"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Compose": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "b78eb5e3-5446-4ee9-b364-8fd59b585bdf"
+          }
+        },
+        "Initialize_variable_-_Approval_Comments": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varApprovalComments",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_-_Approval_Outcome": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f30064e4-fafa-407a-b03b-aa271a139e65"
+          }
+        },
+        "For_each_-_Approval_Response": {
+          "type": "Foreach",
+          "foreach": "@outputs('Start_and_wait_for_an_approval')?['body']?['responses']",
+          "actions": {
+            "Set_variable_-_Approval_Comments": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "varApprovalComments",
+                "value": "@{items('For_each_-_Approval_Response')?['comments']}"
+              },
+              "metadata": {
+                "operationMetadataId": "1141da11-5381-4214-bbdc-c3ddf488f887"
+              }
+            }
+          },
+          "runAfter": {
+            "Set_variable_-_Approval_Outcome": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "f847f662-b428-4d46-8da0-83c19d10b190"
+          }
+        },
+        "Compose_-_Review_Timeframe_Choice": {
+          "type": "Compose",
+          "inputs": "@triggerBody()?['ReviewTimeframe/Value']",
+          "runAfter": {
+            "Initialize_variable_-_Approval_Comments": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "75398013-3b67-4c84-a3c0-462f72372b85"
+          }
+        },
+        "Compose_-_Convert_Review_Timeframe_to_INT": {
+          "type": "Compose",
+          "inputs": "@int(outputs('Compose_-_Review_Timeframe_Choice'))",
+          "runAfter": {
+            "Compose_-_Review_Timeframe_Choice": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1dfb7812-7c70-4eda-b75e-75db124d37e4"
+          }
+        },
+        "Initialize_variable_-_Owner": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varOwner",
+                "type": "string",
+                "value": "@triggerBody()?['HNZOwner']?['Email']"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "a5dfbda2-c9e1-42e3-991d-da68c40c3658"
+          }
+        },
+        "Compose": {
+          "type": "Compose",
+          "inputs": "@triggerBody()?['HNZRegion']?['Value']",
+          "runAfter": {
+            "For_each_-_Approval_Response": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "eae0274f-3e51-461e-af43-a96312d3535d"
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}
