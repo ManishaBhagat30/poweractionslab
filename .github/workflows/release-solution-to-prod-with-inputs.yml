@@ -95,7 +95,7 @@ jobs:
       with:
         name: managedSolutions
         path: ${{ inputs.solution_shipping_folder}}/
-        retention-days: 5
+        retention-days: 5        
 
   release-to-staging:
     needs: [ convert-to-managed ]
