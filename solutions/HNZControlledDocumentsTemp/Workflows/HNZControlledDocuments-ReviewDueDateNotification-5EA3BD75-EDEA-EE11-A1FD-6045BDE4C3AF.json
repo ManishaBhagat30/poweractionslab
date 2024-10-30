@@ -1,0 +1,204 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline-1": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "cap_ConDocSPO"
+        },
+        "runtimeSource": "embedded"
+      },
+      "shared_office365": {
+        "api": {
+          "name": "shared_office365"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "cap_sharedoffice365_c9016"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "type": "Recurrence",
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1,
+            "startTime": "2024-03-26T21:00:00Z"
+          },
+          "metadata": {
+            "operationMetadataId": "01c0c780-9ef8-473d-b46e-4efc9a52fcc5"
+          }
+        }
+      },
+      "actions": {
+        "Initialize_variable_-_Today": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varDateNow",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "843776ea-4540-4672-b49f-7ba72bf09750"
+          }
+        },
+        "Convert_time_zone_-_UTC_to_NZ": {
+          "type": "Expression",
+          "kind": "ConvertTimeZone",
+          "inputs": {
+            "baseTime": "@{utcNow()}",
+            "sourceTimeZone": "UTC",
+            "destinationTimeZone": "New Zealand Standard Time",
+            "formatString": "d"
+          },
+          "runAfter": {
+            "Initialize_variable_-_90_Days": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "36e542dd-e85d-4302-903a-523077bea91c"
+          }
+        },
+        "Set_variable_-_varDateNow": {
+          "type": "SetVariable",
+          "inputs": {
+            "name": "varDateNow",
+            "value": "@body('Convert_time_zone_-_UTC_to_NZ')"
+          },
+          "runAfter": {
+            "Convert_time_zone_-_UTC_to_NZ": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9d417ca4-0631-47bd-9df4-3459df6f4c40"
+          }
+        },
+        "Get_items_from_Register_-_Due_for_Review_in_90_Days": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+              "$filter": "Review_x0020_Due_x0020_Date eq '@{variables('var90Days')}'"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetItems",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {
+            "Set_variable_-_var90Days": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_variable_-_90_Days": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "var90Days",
+                "type": "string"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_-_Today": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "843776ea-4540-4672-b49f-7ba72bf09750"
+          }
+        },
+        "Set_variable_-_var90Days": {
+          "type": "SetVariable",
+          "inputs": {
+            "name": "var90Days",
+            "value": "@addDays(variables('varDateNow'),90)"
+          },
+          "runAfter": {
+            "Set_variable_-_varDateNow": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "9d417ca4-0631-47bd-9df4-3459df6f4c40"
+          }
+        },
+        "Apply_to_each": {
+          "type": "Foreach",
+          "foreach": "@outputs('Get_items_from_Register_-_Due_for_Review_in_90_Days')?['body/value']",
+          "actions": {
+            "Send_an_email_(V2)": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "emailMessage/To": "@body('Get_item')?['Owner']?['Email']",
+                  "emailMessage/Subject": "Controlled Document '@{body('Get_item')?['Title']}' due for review in 90 Days",
+                  "emailMessage/Body": "<p><b><strong>Register ID: </strong></b>@{body('Get_item')?['ID']}<br><b><strong>Link to Item: </strong></b>@{body('Get_item')?['{Link}']}</p>",
+                  "emailMessage/Importance": "High"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                  "operationId": "SendEmailV2",
+                  "connectionName": "shared_office365"
+                }
+              },
+              "runAfter": {
+                "Get_item": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Get_item": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                  "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+                  "id": "@items('Apply_to_each')?['ID']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "GetItem",
+                  "connectionName": "shared_sharepointonline-1"
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Get_items_from_Register_-_Due_for_Review_in_90_Days": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

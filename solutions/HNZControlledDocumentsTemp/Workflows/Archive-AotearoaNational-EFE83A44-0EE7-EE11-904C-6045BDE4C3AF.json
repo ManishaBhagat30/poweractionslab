@@ -1,0 +1,303 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline-1": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "cap_ConDocSPO"
+        },
+        "runtimeSource": "invoker"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "ApiConnection",
+          "inputs": {
+            "operationId": "ForASelectedFileHybridTrigger",
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+              "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entity": {
+                        "properties": {
+                          "ID": {
+                            "title": "ID",
+                            "type": "integer",
+                            "format": "int64"
+                          }
+                        },
+                        "type": "object",
+                        "required": []
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "rows"
+              ]
+            },
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_sharepointonline-1']['connectionId']"
+              }
+            }
+          },
+          "splitOn": "@triggerBody()['rows']",
+          "metadata": {
+            "operationMetadataId": "af94808b-249b-4a3b-a9b9-944e1a3de294"
+          }
+        }
+      },
+      "actions": {
+        "Get_file_properties_-_Working_Area": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+              "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+              "id": "@triggerBody()?['entity']['ID']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetFileItem",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {}
+        },
+        "Get_files_(properties_only)_-_Publishing_Library": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "a0550b1c-69b8-46e1-8600-019a87b91bdb",
+              "$filter": "RegisterID eq @{body('Get_file_properties_-_Working_Area')?['RegisterID']}"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetFileItems",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {
+            "Get_file_properties_-_Working_Area": [
+              "Succeeded"
+            ]
+          }
+        },
+        "For_each": {
+          "type": "Foreach",
+          "foreach": "@outputs('Get_files_(properties_only)_-_Publishing_Library')?['body/value']",
+          "actions": {
+            "Get_file_properties_-_Publishing_Library": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                  "table": "a0550b1c-69b8-46e1-8600-019a87b91bdb",
+                  "id": "@items('For_each')?['ID']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "GetFileItem",
+                  "connectionName": "shared_sharepointonline-1"
+                }
+              }
+            },
+            "Move_file_from_Publishing_to_Archive": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                  "parameters/sourceFileId": "@items('For_each')?['{Identifier}']",
+                  "parameters/destinationDataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                  "parameters/destinationFolderPath": "/Archived Controlled Documents",
+                  "parameters/nameConflictBehavior": 2
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "MoveFileAsync",
+                  "connectionName": "shared_sharepointonline-1"
+                }
+              },
+              "runAfter": {
+                "Get_file_properties_-_Publishing_Library": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Update_file_properties_-_Archive_Library": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                  "table": "0cdb7829-d48c-4da9-b3fc-453b97f6b9c7",
+                  "id": "@outputs('Move_file_from_Publishing_to_Archive')?['body/ItemId']",
+                  "item/Title": "@body('Get_file_properties_-_Publishing_Library')?['Title']",
+                  "item/Consultation": "@body('Get_file_properties_-_Publishing_Library')?['Consultation']",
+                  "item/ChangeType/Value": "@body('Get_file_properties_-_Publishing_Library')?['ChangeType']?['Value']",
+                  "item/Printing": "@body('Get_file_properties_-_Publishing_Library')?['Printing']",
+                  "item/Servicesanddepartments": "@body('Get_file_properties_-_Publishing_Library')?['Printing']",
+                  "item/Specialties": "@body('Get_file_properties_-_Publishing_Library')?['Specialties']",
+                  "item/WardandUnits": "@body('Get_file_properties_-_Publishing_Library')?['WardandUnits']",
+                  "item/WhatHasChanged": "@body('Get_file_properties_-_Publishing_Library')?['WhatHasChanged']",
+                  "item/Directorates": "@body('Get_file_properties_-_Publishing_Library')?['Directorates']",
+                  "item/HNZDocumentType/Value": "@body('Get_file_properties_-_Publishing_Library')?['HNZDocumentType']?['Value']",
+                  "item/HNZRegion": [
+                    {
+                      "Value": "@body('Get_file_properties_-_Publishing_Library')?['HNZRegion']?[0]?['Value']"
+                    }
+                  ],
+                  "item/HNZLocalArea": [
+                    {
+                      "Value": "@body('Get_file_properties_-_Publishing_Library')?['HNZLocalArea']?[0]?['Value']"
+                    }
+                  ],
+                  "item/HNZBusinessUnit/Value": "@body('Get_file_properties_-_Publishing_Library')?['HNZBusinessUnit']?['Value']",
+                  "item/Appliesto/Value": "@body('Get_file_properties_-_Publishing_Library')?['Appliesto']?['Value']",
+                  "item/NationalID": "@body('Get_file_properties_-_Publishing_Library')?['NationalID']",
+                  "item/ExternalSourceName": "@body('Get_file_properties_-_Publishing_Library')?['ExternalSourceName']",
+                  "item/Facility": "@body('Get_file_properties_-_Publishing_Library')?['Facility']"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "PatchFileItem",
+                  "connectionName": "shared_sharepointonline-1"
+                }
+              },
+              "runAfter": {
+                "Move_file_from_Publishing_to_Archive": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Get_files_(properties_only)_-_Publishing_Library": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Update_file_properties_-_Set_Stage_to_'Archived'": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+              "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+              "id": "@triggerBody()?['entity']['ID']",
+              "item/Status/Value": "05 Archived",
+              "item/Approval_x0020_Status/Value": "Approved"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "PatchFileItem",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {
+            "For_each": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Create_item_-_Add_to_Auditing": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "87a22fab-9d3a-47e4-b2c8-dd0087e118f6",
+              "item/Title": "@body('Get_item_from_Register')?['Title']",
+              "item/Document_x0020_Version": "@body('Get_file_properties_-_Working_Area')?['{VersionNumber}']",
+              "item/Status/Value": "Archived",
+              "item/WorkingDocumentID": "@body('Get_file_properties_-_Working_Area')?['ID']",
+              "item/Link_x0020_to_x0020_Document": "@body('Get_file_properties_-_Working_Area')?['{Link}']",
+              "item/Link_x0020_to_x0020_Folder": "@body('Get_item_from_Register')?['Link_x0020_to_x0020_Working_x002']",
+              "item/Register_x0020_ID": "@body('Get_file_properties_-_Working_Area')?['RegisterID']",
+              "item/LinktoRegister": "@body('Get_item_from_Register')?['{Link}']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "PostItem",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {
+            "Update_item_in_Register": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Update_item_in_Register": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+              "id": "@body('Get_item_from_Register')?['ID']",
+              "item/Title": "@body('Get_item_from_Register')?['Title']",
+              "item/Status/Value": "Archived"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "PatchItem",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {
+            "Get_item_from_Register": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Get_item_from_Register": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+              "id": "@body('Get_file_properties_-_Working_Area')?['RegisterID']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetItem",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {
+            "Update_file_properties_-_Set_Stage_to_'Archived'": [
+              "Succeeded"
+            ]
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

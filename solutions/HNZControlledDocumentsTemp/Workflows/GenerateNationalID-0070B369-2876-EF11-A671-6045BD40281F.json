@@ -1,0 +1,189 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline-1": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "cap_ConDocSPO"
+        },
+        "runtimeSource": "embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "When_an_item_is_created_in_Register": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "e0df1008-187e-45ce-b28f-c806a15003bc"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetOnNewItems",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "recurrence": {
+            "interval": 5,
+            "frequency": "Minute"
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          },
+          "splitOn": "@triggerOutputs()?['body/value']",
+          "metadata": {
+            "operationMetadataId": "e895fcd5-a543-4345-857b-7a22fd564739"
+          }
+        }
+      },
+      "actions": {
+        "Get_Register_item": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+              "id": "@triggerOutputs()?['body/ID']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetItem",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "12ee0671-b823-4fd9-b656-fb6862c23ff0"
+          }
+        },
+        "Get_item_-_National_ID": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "ff02be32-fadc-4804-9a8a-d37e9b4954ab",
+              "id": 1
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetItem",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {
+            "Get_Register_item": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "44333450-c919-470e-a8af-4124735f08f1"
+          }
+        },
+        "Initialize_variable_-_NationalID": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varNationalID",
+                "type": "float",
+                "value": "@outputs('Get_item_-_National_ID')?['body/CurrentValue']"
+              }
+            ]
+          },
+          "runAfter": {
+            "Get_item_-_National_ID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "334766f3-2095-4b6d-9163-906873811abb"
+          }
+        },
+        "Increment_variable_-_NationalID": {
+          "type": "IncrementVariable",
+          "inputs": {
+            "name": "varNationalID",
+            "value": 1
+          },
+          "runAfter": {
+            "Update_item_in_Register_-_National_ID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "8bfdf62f-ebd2-4c02-a09b-782241c41fe5"
+          }
+        },
+        "Increment_National_ID_value": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "ff02be32-fadc-4804-9a8a-d37e9b4954ab",
+              "id": "@outputs('Get_item_-_National_ID')?['body/ID']",
+              "item/StartingValue": 10000,
+              "item/CurrentValue": "@variables('varNationalID')"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "PatchItem",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {
+            "Increment_variable_-_NationalID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "4e195c87-a2b5-4360-956a-f532244d3c73"
+          }
+        },
+        "Update_item_in_Register_-_National_ID": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+              "id": "@outputs('Get_Register_item')?['body/ID']",
+              "item/Title": "@outputs('Get_Register_item')?['body/Title']",
+              "item/NationalID": "@variables('varNationalID')"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "PatchItem",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {
+            "Initialize_variable_-_NationalID": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1bbe3af2-e118-4914-84d9-334f5c32c0eb"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

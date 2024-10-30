@@ -1,0 +1,415 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "cap_sharedsharepointonline_5c086"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_approvals": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "cap_sharedapprovals_ed737"
+        },
+        "api": {
+          "name": "shared_approvals"
+        }
+      },
+      "shared_office365groups": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "cap_sharedoffice365groups_73cf8"
+        },
+        "api": {
+          "name": "shared_office365groups"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "invoker",
+        "connection": {
+          "connectionReferenceLogicalName": "cap_sharedoffice365_301f2"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "splitOn": "@triggerBody()['rows']",
+          "metadata": {
+            "operationMetadataId": "3e315366-92d0-4e8e-b31c-c51315d2b0ed"
+          },
+          "type": "Request",
+          "kind": "ApiConnection",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entity": {
+                        "type": "object",
+                        "properties": {
+                          "ID": {
+                            "title": "ID",
+                            "type": "integer",
+                            "format": "int64"
+                          }
+                        },
+                        "required": [
+                          "ID"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "entity"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "rows"
+              ]
+            },
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+              }
+            },
+            "operationId": "ForASelectedFileHybridTrigger",
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+              "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5"
+            }
+          }
+        }
+      },
+      "actions": {
+        "Start_and_wait_for_an_approval": {
+          "runAfter": {
+            "Apply_to_each": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fe47d762-f3c2-4a35-ab04-5f34956b4cb5"
+          },
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_approvals",
+              "operationId": "StartAndWaitForAnApproval",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_approvals"
+            },
+            "parameters": {
+              "approvalType": "BasicAwaitAll",
+              "WebhookApprovalCreationInput/title": "Controlled Document Approval - @{body('Get_file_properties')?['ID']} - @{body('Get_file_properties')?['Title']}",
+              "WebhookApprovalCreationInput/assignedTo": "@body('Get_file_properties')?['Authoriser']?['Email']",
+              "WebhookApprovalCreationInput/itemLink": "@body('Get_file_properties')?['{Link}']",
+              "WebhookApprovalCreationInput/enableNotifications": true,
+              "WebhookApprovalCreationInput/enableReassignment": true
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "List_group_members": {
+          "runAfter": {
+            "Get_file_properties": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "88e93828-fc97-4a58-a9a8-22845727f95f"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_office365groups",
+              "operationId": "ListGroupMembers",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365groups"
+            },
+            "parameters": {
+              "groupId": "bcc7bbb2-d013-4e0c-b454-083d60d3daf9"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Get_file_properties": {
+          "runAfter": {
+            "Initialize_variable_-_Controller_Email": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "1f93c1e9-87c6-415e-8887-76b80c3ca11b"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetFileItem",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+              "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+              "id": "@triggerBody()?['entity']['ID']"
+            },
+            "authentication": {
+              "type": "Raw",
+              "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+            }
+          }
+        },
+        "Initialize_variable_-_Controller_Email": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "541a9c17-223c-437d-9323-704a835851c4"
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varEmailString",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "Apply_to_each": {
+          "foreach": "@outputs('List_group_members')?['body/value']",
+          "actions": {
+            "Condition_-_Email_not_empty": {
+              "actions": {
+                "Append_to_string_variable": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "275818ba-1caa-40a7-8320-0bfce2654772"
+                  },
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "varEmailString",
+                    "value": "@{items('Apply_to_each')?['mail']};"
+                  }
+                }
+              },
+              "runAfter": {},
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "equals": [
+                        "@items('Apply_to_each')?['mail']",
+                        "@null"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "71db62eb-a0f0-490b-970b-621cd098c26d"
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "List_group_members": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "7bab1c02-5f6c-432d-b18c-4cdefd782466"
+          },
+          "type": "Foreach"
+        },
+        "Condition_-_Approval_Outcome": {
+          "actions": {
+            "For_each": {
+              "foreach": "@outputs('Start_and_wait_for_an_approval')?['body']?['responses']",
+              "actions": {
+                "Send_an_email_-_Controllers": {
+                  "runAfter": {
+                    "Update_file_properties_-_Approved": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "0fd1ef5e-7772-4725-83d7-d120889c6af5"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                    },
+                    "parameters": {
+                      "emailMessage/To": "@variables('varEmailString')",
+                      "emailMessage/Subject": "Controlled Document: @{body('Get_file_properties')?['ID']} - @{outputs('Get_file_properties')?['body/{Name}']} has been approved",
+                      "emailMessage/Body": "<p class=\"editor-paragraph\"><b><strong class=\"editor-text-bold\">Controlled Document:</strong></b> <i><em class=\"editor-text-italic\">'</em></i>@{body('Get_file_properties')?['ID']}<i><em class=\"editor-text-italic\"> - </em></i>@{body('Get_file_properties')?['Title']}<i><em class=\"editor-text-italic\">'</em></i> has been approved by @{items('For_each')?['responder']?['displayName']} (@{items('For_each')?['responder']?['email']}).</p><p class=\"editor-paragraph\"></p><br><p class=\"editor-paragraph\">The <a class=\"editor-link\" href=\"@{body('Get_file_properties')?['{Link}']}\">Document</a> can now be Published</p>",
+                      "emailMessage/Importance": "Normal"
+                    },
+                    "authentication": {
+                      "type": "Raw",
+                      "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                    }
+                  }
+                },
+                "Update_file_properties_-_Approved": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "3dfd4c81-e1f8-4fe5-a9c4-86c4e5982771"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "PatchFileItem",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                    },
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                      "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+                      "id": "@body('Get_file_properties')?['ID']",
+                      "item/Appliesto/Value": "",
+                      "item/Status/Value": "03 In Review",
+                      "item/Approval_x0020_Status/Value": "Approved",
+                      "item/Consultation": ""
+                    },
+                    "authentication": {
+                      "type": "Raw",
+                      "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                    }
+                  }
+                }
+              },
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "b63863f4-98a0-4fe7-bf08-b8eef49d9de2"
+              },
+              "type": "Foreach"
+            }
+          },
+          "runAfter": {
+            "Start_and_wait_for_an_approval": [
+              "Succeeded"
+            ]
+          },
+          "else": {
+            "actions": {
+              "For_each_1": {
+                "foreach": "@outputs('Start_and_wait_for_an_approval')?['body']?['responses']",
+                "actions": {
+                  "Send_an_email_-_Owner": {
+                    "runAfter": {
+                      "Update_file_properties_-_Rejected": [
+                        "Succeeded"
+                      ]
+                    },
+                    "metadata": {
+                      "operationMetadataId": "aac4f47b-30b3-4eb8-8a1b-001ed82262ab"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_office365",
+                        "operationId": "SendEmailV2",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365"
+                      },
+                      "parameters": {
+                        "emailMessage/To": "@body('Get_file_properties')?['HNZOwner']?['Email']",
+                        "emailMessage/Subject": "Controlled Document: @{body('Get_file_properties')?['ID']} - @{outputs('Get_file_properties')?['body/{Name}']} has been Rejected",
+                        "emailMessage/Body": "<p class=\"editor-paragraph\"><b><strong class=\"editor-text-bold\">Controlled Document: </strong></b>'@{body('Get_file_properties')?['ID']} - @{body('Get_file_properties')?['Title']}' has been Rejected by @{items('For_each_1')?['responder']?['displayName']} (@{items('For_each_1')?['responder']?['email']}).</p><p class=\"editor-paragraph\"></p><br><p class=\"editor-paragraph\"><b><strong class=\"editor-text-bold\">Response: </strong></b>@{items('For_each_1')?['comments']}</p>",
+                        "emailMessage/Importance": "Normal"
+                      },
+                      "authentication": {
+                        "type": "Raw",
+                        "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                      }
+                    }
+                  },
+                  "Update_file_properties_-_Rejected": {
+                    "runAfter": {},
+                    "metadata": {
+                      "operationMetadataId": "5ffcc548-cc71-4ab9-aa89-3209595844c8"
+                    },
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_sharepointonline",
+                        "operationId": "PatchFileItem",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                      },
+                      "parameters": {
+                        "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                        "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+                        "id": "@body('Get_file_properties')?['ID']",
+                        "item/Appliesto/Value": "",
+                        "item/Status/Value": "03 In Review",
+                        "item/Approval_x0020_Status/Value": "Rejected",
+                        "item/Consultation": ""
+                      },
+                      "authentication": {
+                        "type": "Raw",
+                        "value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+                      }
+                    }
+                  }
+                },
+                "runAfter": {},
+                "metadata": {
+                  "operationMetadataId": "f0c73942-6e63-41a0-bd64-d154e499cbcc"
+                },
+                "type": "Foreach"
+              }
+            }
+          },
+          "expression": {
+            "and": [
+              {
+                "contains": [
+                  "@body('Start_and_wait_for_an_approval')?['outcome']",
+                  "Approve"
+                ]
+              }
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "e5206d3c-2953-4360-8db6-338d35a493f1"
+          },
+          "type": "If"
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

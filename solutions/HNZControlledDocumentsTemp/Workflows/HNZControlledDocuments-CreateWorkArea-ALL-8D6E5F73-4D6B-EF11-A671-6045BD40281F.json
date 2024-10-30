@@ -1,0 +1,2007 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline-1": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "cap_ConDocSPO"
+        },
+        "runtimeSource": "invoker"
+      },
+      "shared_sharepointonline": {
+        "api": {
+          "name": "shared_sharepointonline"
+        },
+        "connection": {
+          "connectionReferenceLogicalName": "new_sharedsharepointonline_55683"
+        },
+        "runtimeSource": "invoker"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "ApiConnection",
+          "inputs": {
+            "operationId": "GetItemHybridTriggerSchema",
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "e0df1008-187e-45ce-b28f-c806a15003bc"
+            },
+            "schema": {
+              "type": "object",
+              "properties": {
+                "rows": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "entity": {
+                        "properties": {
+                          "ID": {
+                            "title": "ID",
+                            "type": "integer",
+                            "format": "int64"
+                          }
+                        },
+                        "type": "object",
+                        "required": []
+                      }
+                    }
+                  }
+                }
+              },
+              "required": [
+                "rows"
+              ]
+            },
+            "host": {
+              "connection": {
+                "name": "@parameters('$connections')['shared_sharepointonline-1']['connectionId']"
+              }
+            }
+          },
+          "splitOn": "@triggerBody()['rows']",
+          "metadata": {
+            "operationMetadataId": "2fa0ba43-20b0-4bf3-95eb-d4a040fdc776"
+          }
+        }
+      },
+      "actions": {
+        "Get_item": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+              "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+              "id": "@triggerBody()?['entity']['ID']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "operationId": "GetItem",
+              "connectionName": "shared_sharepointonline-1"
+            }
+          },
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "9aec094a-4e3a-4de7-848a-8eb2b0e021ae"
+          }
+        },
+        "Initialize_variable_-_Region": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varRegion",
+                "type": "string",
+                "value": "@body('Get_item')?['HNZRegion']?['Label']"
+              }
+            ]
+          },
+          "runAfter": {
+            "Get_item": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Switch": {
+          "type": "Switch",
+          "expression": "@variables('varRegion')",
+          "default": {
+            "actions": {}
+          },
+          "cases": {
+            "Case_-_Aotearoa_-_National": {
+              "actions": {
+                "Create_new_document_set_-_Aotearoa_National": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                      "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}",
+                      "parameters/contentTypeId": "0x0120D52000E9D2BB1F78631F4490430EDCE6D2BBB0004104F8BE460A6845B716DCA50D06F475",
+                      "parameters/DynamicProperties/HNZOwner/Claims": "@body('Get_item')?['Owner']?['Claims']",
+                      "parameters/DynamicProperties/Authoriser/Claims": "@body('Get_item')?['Authoriser']?['Claims']",
+                      "parameters/DynamicProperties/Facilitator/Claims": "@body('Get_item')?['Facilitator']?['Claims']",
+                      "parameters/DynamicProperties/ExternalSourceName": "@body('Get_item')?['ExternalSourceName']",
+                      "parameters/DynamicProperties/Facility": "@body('Get_item')?['Facility']",
+                      "parameters/DynamicProperties/NationalID": "@body('Get_item')?['NationalID']",
+                      "parameters/DynamicProperties/RegisterID": "@body('Get_item')?['ID']",
+                      "parameters/DynamicProperties/Status/Value": "01 In Development"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewDocumentSet",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "metadata": {
+                    "operationMetadataId": "d1a9426a-0d9a-41b1-a698-02eecb47db19"
+                  }
+                },
+                "Update_item_in_Register_-_Aotearoa_-_National": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                      "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+                      "id": "@body('Get_item')?['ID']",
+                      "item/Title": "@body('Get_item')?['Title']",
+                      "item/Link_x0020_to_x0020_Working_x002": "@body('Create_new_document_set_-_Aotearoa_National')?['{Link}']",
+                      "item/Status/Value": "New Document",
+                      "item/Work_x0020_Area_x0020_Created": true
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchItem",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Aotearoa_-_National_-_Grant_Permissions_-_Owner": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "07cd5518-9d12-44e4-a98a-1ff76f7798da"
+                  }
+                },
+                "Create_Folder_'Correspondence'_-_Aotearoa_-_National": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                      "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Implementation'_-_Aotearoa_-_National": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Consultation'_-_Aotearoa_-_National": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                      "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Consultation"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Correspondence'_-_Aotearoa_-_National": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Aotearoa_-_National_-_Break_Inheritance": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Aotearoa_National')?['ID']})/breakroleinheritance(copyRoleAssignments=false,clearSubscopes=true)\n"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_Document_Set_Metadata_-_Aotearoa_-_National": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Update_Document_Set_Metadata_-_Aotearoa_-_National": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                      "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+                      "id": "@body('Create_new_document_set_-_Aotearoa_National')?['ID']",
+                      "item/HNZRegion": [
+                        {
+                          "Value": "@body('Get_item')?['HNZRegion']?['Value']"
+                        }
+                      ],
+                      "item/HNZLocalArea": [
+                        {
+                          "Value": "@body('Get_item')?['Local_x0020_Area']?['Value']"
+                        }
+                      ],
+                      "item/HNZDocumentType/Value": "@body('Get_item')?['Document_x0020_Type']?['Value']",
+                      "item/HNZBusinessUnit/Value": "@body('Get_item')?['HNZBusinessUnit']?['Value']",
+                      "item/Appliesto/Value": "@body('Get_item')?['Appliesto']?['Value']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchFileItem",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_new_document_set_-_Aotearoa_National": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Authorisations'_-_Aotearoa_-_National": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                      "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Authorisations"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Consultation'_-_Aotearoa_-_National": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Feedback'_-_Aotearoa_-_National": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                      "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Feedback"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Authorisations'_-_Aotearoa_-_National": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Aotearoa_-_National_-_Get_Owner": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Owner']?['Email']}')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Condition_1": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Implementation'_-_Aotearoa_-_National": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                      "table": "f040dbf1-3b1c-4957-9e81-2b2225b9cea5",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Implementation"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_item_in_Register_-_Aotearoa_-_National": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Aotearoa_-_National_-_Grant_Permissions_-_Owner": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Aotearoa_National')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Aotearoa_-_National_-_Get_Owner')['d']['id']}, roleDefId =1073741830)"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Aotearoa_-_National_-_Get_Owner": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Condition": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@body('Get_item')?['Authoriser']?['Email']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Aotearoa_-_National_-_Get_Authoriser": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Authoriser']?['Email']}')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline"
+                        }
+                      }
+                    },
+                    "Aotearoa_-_National_-_Grant_Permissions_-_Authoriser": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Aotearoa_National')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Aotearoa_-_National_-_Get_Authoriser')['d']['id']}, roleDefId =1073741830)"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Aotearoa_-_National_-_Get_Authoriser": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Aotearoa_-_National_-_Break_Inheritance": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Condition_1": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@body('Get_item')?['Facilitator']?['Email']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Aotearoa_-_National_-_Get_Facilitator": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Facilitator']?['Email']}')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      }
+                    },
+                    "Aotearoa_-_National_-_Grant_Permissions_-_Facilitator": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000576",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Aotearoa_National')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Aotearoa_-_National_-_Get_Facilitator')['d']['id']}, roleDefId =1073741830)"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Aotearoa_-_National_-_Get_Facilitator": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Condition": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "case": "Aotearoa - National"
+            },
+            "Case_2_-_Northern": {
+              "actions": {
+                "Create_new_document_set_-_Northern": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}",
+                      "parameters/contentTypeId": "0x0120D52000E9D2BB1F78631F4490430EDCE6D2BBB0009957D54A6C0FD948B09F830DDACB21DF",
+                      "parameters/DynamicProperties/Status/Value": "01 In Development",
+                      "parameters/DynamicProperties/HNZOwner/Claims": "@body('Get_item')?['Owner']?['Claims']",
+                      "parameters/DynamicProperties/Authoriser/Claims": "@body('Get_item')?['Authoriser']?['Claims']",
+                      "parameters/DynamicProperties/Facilitator/Claims": "@body('Get_item')?['Facilitator']?['Claims']",
+                      "parameters/DynamicProperties/Facility": "@body('Get_item')?['Facility']",
+                      "parameters/DynamicProperties/NationalID": "@body('Get_item')?['NationalID']",
+                      "parameters/DynamicProperties/ExternalSourceName": "@body('Get_item')?['ExternalSourceName']",
+                      "parameters/DynamicProperties/RegisterID": "@body('Get_item')?['ID']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewDocumentSet",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  }
+                },
+                "Update_Document_Set_Metadata_-_Northern": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "id": "@body('Create_new_document_set_-_Northern')?['ID']",
+                      "item/HNZDocumentType/Value": "@body('Get_item')?['Document_x0020_Type']?['Value']",
+                      "item/HNZRegion": [
+                        {
+                          "Value": "@body('Get_item')?['HNZRegion']?['Value']"
+                        }
+                      ],
+                      "item/HNZLocalArea": [
+                        {
+                          "Value": "@body('Get_item')?['Local_x0020_Area']?['Value']"
+                        }
+                      ],
+                      "item/HNZBusinessUnit/Value": "@body('Get_item')?['HNZBusinessUnit']?['Value']",
+                      "item/Appliesto/Value": "@body('Get_item')?['Appliesto']?['Value']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchFileItem",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_new_document_set_-_Northern": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Northern_-_Break_Inheritance": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Northern')?['ID']})/breakroleinheritance(copyRoleAssignments=false,clearSubscopes=true)\n"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_Document_Set_Metadata_-_Northern": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Correspondence'_-_Northern": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Implementation'_-_Northern": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Authorisations'_-_Northern": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Authorisations"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Consultation'_-_Northern": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Feedback'_-_Northern": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Feedback"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Authorisations'_-_Northern": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Update_item_in_Register_-_Northern": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                      "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+                      "id": "@body('Get_item')?['ID']",
+                      "item/Title": "@body('Get_item')?['Title']",
+                      "item/Link_x0020_to_x0020_Working_x002": "@body('Create_new_document_set_-_Northern')?['{Link}']",
+                      "item/Status/Value": "New Document",
+                      "item/Work_x0020_Area_x0020_Created": true
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchItem",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Northern_-_Grant_Permissions_-_Owner": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "07cd5518-9d12-44e4-a98a-1ff76f7798da"
+                  }
+                },
+                "Create_Folder_'Consultation'_-_Northern": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Consultation"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Correspondence'_-_Northern": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Northern_-_Get_Owner": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Owner']?['Email']}')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Condition_3": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Northern_-_Grant_Permissions_-_Owner": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Northern')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Northern_-_Get_Owner')['d']['id']}, roleDefId =1073741830)"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Northern_-_Get_Owner": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Implementation'_-_Northern": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Implementation"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_item_in_Register_-_Northern": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Condition_2": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@body('Get_item')?['Authoriser']?['Email']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Northern_-_Get_Authoriser": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Authoriser']?['Email']}')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline"
+                        }
+                      }
+                    },
+                    "Northern__-_Grant_Permissions_-_Authoriser": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Northern')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Northern_-_Get_Authoriser')['d']['id']}, roleDefId =1073741830)"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Northern_-_Get_Authoriser": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Northern_-_Break_Inheritance": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Condition_3": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@body('Get_item')?['Facilitator']?['Email']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Northern_-_Get_Facilitator": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Facilitator']?['Email']}')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      }
+                    },
+                    "Northern_-_Grant_Permissions_-_Facilitator": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000659",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Northern')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Northern_-_Get_Facilitator')['d']['id']}, roleDefId =1073741830)"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Northern_-_Get_Facilitator": [
+                          "Succeeded"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Condition_2": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "case": "Northern"
+            },
+            "Case_3_-_Te_Ikaroa_-_Central": {
+              "actions": {
+                "Create_new_document_set_-_Te_Ikaroa_-_Central": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}",
+                      "parameters/contentTypeId": "0x0120D52000E9D2BB1F78631F4490430EDCE6D2BBB00034F6E9C6463D0F4EAD70F6546531105E",
+                      "parameters/DynamicProperties/Status/Value": "01 In Development",
+                      "parameters/DynamicProperties/HNZOwner/Claims": "@body('Get_item')?['Owner']?['Claims']",
+                      "parameters/DynamicProperties/NationalID": "@body('Get_item')?['NationalID']",
+                      "parameters/DynamicProperties/Authoriser/Claims": "@body('Get_item')?['Authoriser']?['Claims']",
+                      "parameters/DynamicProperties/Facilitator/Claims": "@body('Get_item')?['Facilitator']?['Claims']",
+                      "parameters/DynamicProperties/ExternalSourceName": "@body('Get_item')?['ExternalSourceName']",
+                      "parameters/DynamicProperties/Facility": "@body('Get_item')?['Facility']",
+                      "parameters/DynamicProperties/RegisterID": "@body('Get_item')?['ID']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewDocumentSet",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  }
+                },
+                "Update_Document_Set_Metadata_-_Te_Ikaroa_-_Central": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "id": "@body('Create_new_document_set_-_Te_Ikaroa_-_Central')?['ID']",
+                      "item/HNZRegion": [
+                        {
+                          "Value": "@body('Get_item')?['HNZRegion']?['Value']"
+                        }
+                      ],
+                      "item/HNZLocalArea": [
+                        {
+                          "Value": "@body('Get_item')?['Local_x0020_Area']?['Value']"
+                        }
+                      ],
+                      "item/HNZDocumentType/Value": "@body('Get_item')?['Document_x0020_Type']?['Value']",
+                      "item/HNZBusinessUnit/Value": "@body('Get_item')?['HNZBusinessUnit']?['Value']",
+                      "item/Appliesto/Value": "@body('Get_item')?['Appliesto']?['Value']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchFileItem",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_new_document_set_-_Te_Ikaroa_-_Central": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Update_item_in_Register__-_Te_Ikaroa_-_Central": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                      "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+                      "id": "@body('Get_item')?['ID']",
+                      "item/Title": "@body('Get_item')?['Title']",
+                      "item/Link_x0020_to_x0020_Working_x002": "@body('Create_new_document_set_-_Te_Ikaroa_-_Central')?['{Link}']",
+                      "item/Status/Value": "New Document",
+                      "item/Work_x0020_Area_x0020_Created": true
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchItem",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Te_Ikaroa_-_Central_-_Grant_Permissions_-_Owner": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "07cd5518-9d12-44e4-a98a-1ff76f7798da"
+                  }
+                },
+                "Te_Ikaroa_-_Central_-_Break_Inheritance": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Ikaroa_-_Central')?['ID']})/breakroleinheritance(copyRoleAssignments=false,clearSubscopes=true)\n"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_Document_Set_Metadata_-_Te_Ikaroa_-_Central": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Te_Ikaroa_-_Central_-_Get_Owner": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Owner']?['Email']}')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Condition_3-copy": [
+                      "SUCCEEDED"
+                    ]
+                  }
+                },
+                "Te_Ikaroa_-_Central_-_Grant_Permissions_-_Owner": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Ikaroa_-_Central')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Te_Ikaroa_-_Central_-_Get_Owner')['d']['id']}, roleDefId =1073741830)"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Te_Ikaroa_-_Central_-_Get_Owner": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Correspondence'_-_Te_Ikaroa_-_Central": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Implementation'_-_Te_Ikaroa": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Consultation'_-_Te_Ikaroa_-_Central": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Consultation"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Correspondence'_-_Te_Ikaroa_-_Central": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Authorisations'_-_Te_Ikaroa_-_Central": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Authorisations"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Consultation'_-_Te_Ikaroa_-_Central": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Feedback'_-_Te_Ikaroa_-_Central": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Feedback"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Authorisations'_-_Te_Ikaroa_-_Central": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Implementation'_-_Te_Ikaroa": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Implementation"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_item_in_Register__-_Te_Ikaroa_-_Central": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Condition_2-copy": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@body('Get_item')?['Authoriser']?['Email']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Te_Ikaroa_-_Central_-_Get_Authoriser": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Authoriser']?['Email']}')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline"
+                        }
+                      }
+                    },
+                    "Te_Ikaroa_-_Central_-_Grant_Permissions_-_Authoriser": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Ikaroa_-_Central')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Te_Ikaroa_-_Central_-_Get_Authoriser')['d']['id']}, roleDefId =1073741830)"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Te_Ikaroa_-_Central_-_Get_Authoriser": [
+                          "SUCCEEDED"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Te_Ikaroa_-_Central_-_Break_Inheritance": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Condition_3-copy": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@body('Get_item')?['Facilitator']?['Email']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Te_Ikaroa_-_Central_-_Get_Facilitator": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Facilitator']?['Email']}')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      }
+                    },
+                    "Te_Ikaroa_-_Central_-_Grant_Permissions_-_Facilitator": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000660",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Ikaroa_-_Central')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Te_Ikaroa_-_Central_-_Get_Facilitator')['d']['id']}, roleDefId =1073741830)"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Te_Ikaroa_-_Central_-_Get_Facilitator": [
+                          "SUCCEEDED"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Condition_2-copy": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "case": "Te Ikaroa - Central"
+            },
+            "Case_-_Te_Manawa_Taki": {
+              "actions": {
+                "Create_new_document_set_-_Te_Manawa_Taki": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}",
+                      "parameters/contentTypeId": "0x0120D52000E9D2BB1F78631F4490430EDCE6D2BBB000D45DF958BDBE794A988310D3F1F60027",
+                      "parameters/DynamicProperties/Status/Value": "01 In Development",
+                      "parameters/DynamicProperties/HNZOwner/Claims": "@body('Get_item')?['Owner']?['Claims']",
+                      "parameters/DynamicProperties/NationalID": "@body('Get_item')?['NationalID']",
+                      "parameters/DynamicProperties/Authoriser/Claims": "@body('Get_item')?['Authoriser']?['Claims']",
+                      "parameters/DynamicProperties/Facilitator/Claims": "@body('Get_item')?['Facilitator']?['Claims']",
+                      "parameters/DynamicProperties/ExternalSourceName": "@body('Get_item')?['ExternalSourceName']",
+                      "parameters/DynamicProperties/Facility": "@body('Get_item')?['Facility']",
+                      "parameters/DynamicProperties/RegisterID": "@body('Get_item')?['ID']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewDocumentSet",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  }
+                },
+                "Update_Document_Set_metadata_-_Te_Manawa_Taki": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "id": "@body('Create_new_document_set_-_Te_Manawa_Taki')?['ID']",
+                      "item/Appliesto/Value": "@body('Get_item')?['Appliesto']?['Value']",
+                      "item/HNZRegion": [
+                        {
+                          "Value": "@body('Get_item')?['HNZRegion']?['Value']"
+                        }
+                      ],
+                      "item/HNZLocalArea": [
+                        {
+                          "Value": "@body('Get_item')?['Local_x0020_Area']?['Value']"
+                        }
+                      ],
+                      "item/HNZDocumentType/Value": "@body('Get_item')?['Document_x0020_Type']?['Value']",
+                      "item/HNZBusinessUnit/Value": "@body('Get_item')?['HNZBusinessUnit']?['Value']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchFileItem",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_new_document_set_-_Te_Manawa_Taki": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Update_item_in_Register__-_Te_Manawa_Taki": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                      "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+                      "id": "@body('Get_item')?['ID']",
+                      "item/Title": "@body('Get_item')?['Title']",
+                      "item/Link_x0020_to_x0020_Working_x002": "@body('Create_new_document_set_-_Te_Manawa_Taki')?['{Link}']",
+                      "item/Status/Value": "New Document",
+                      "item/Work_x0020_Area_x0020_Created": true
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchItem",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Te_Manawa_Taki_-_Grant_Permissions_-_Owner": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "07cd5518-9d12-44e4-a98a-1ff76f7798da"
+                  }
+                },
+                "Te_Manawa_Taki_-_Break_Inheritance": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Manawa_Taki')?['ID']})/breakroleinheritance(copyRoleAssignments=false,clearSubscopes=true)\n"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_Document_Set_metadata_-_Te_Manawa_Taki": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Te_Manawa_Taki_-_Get_Owner": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Owner']?['Email']}')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Condition_3-copy_1": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Te_Manawa_Taki_-_Grant_Permissions_-_Owner": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Manawa_Taki')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Te_Manawa_Taki_-_Get_Owner')['d']['id']}, roleDefId =1073741830)"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Te_Manawa_Taki_-_Get_Owner": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Correspondence'_-_Te_Manawa_Taki": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Implementation'_-_Te_Manawa_Taki": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Consultation'_-_Te_Manawa_Taki": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Consultation"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Correspondence'_-_Te_Manawa_Taki": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Authorisations'_-_Te_Manawa_Taki": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Authorisations"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Consultation'_-_Te_Manawa_Taki": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Feedback'_-_Te_Manawa_Taki": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Feedback"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Authorisations'_-_Te_Manawa_Taki": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Implementation'_-_Te_Manawa_Taki": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Implementation"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_item_in_Register__-_Te_Manawa_Taki": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Condition_2-copy_1": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@body('Get_item')?['Authoriser']?['Email']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Te_Manawa_Taki_-_Get_Authoriser": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Authoriser']?['Email']}')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline"
+                        }
+                      }
+                    },
+                    "Te_Manawa_Taki_-_Grant_Permissions_-_Authoriser": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Manawa_Taki')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Te_Manawa_Taki_-_Get_Authoriser')['d']['id']}, roleDefId =1073741830)"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Te_Manawa_Taki_-_Get_Authoriser": [
+                          "SUCCEEDED"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Te_Manawa_Taki_-_Break_Inheritance": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Condition_3-copy_1": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@body('Get_item')?['Facilitator']?['Email']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Te_Manawa_Taki_-_Get_Facilitator": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Facilitator']?['Email']}')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      }
+                    },
+                    "Te_Manawa_Taki_-_Grant_Permissions_-_Facilitator": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000661",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Manawa_Taki')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Te_Manawa_Taki_-_Get_Facilitator')['d']['id']}, roleDefId =1073741830)"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Te_Manawa_Taki_-_Get_Facilitator": [
+                          "SUCCEEDED"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Condition_2-copy_1": [
+                      "SUCCEEDED"
+                    ]
+                  }
+                }
+              },
+              "case": "Te Manawa Taki"
+            },
+            "Case__-_Te_Waipounamu_-_South_Island": {
+              "actions": {
+                "Create_new_document_set_-_Te_Waipounamu": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}",
+                      "parameters/contentTypeId": "0x0120D52000E9D2BB1F78631F4490430EDCE6D2BBB0006836CBDB00D4EB46A8F003A3B5EFC4F3",
+                      "parameters/DynamicProperties/Status/Value": "01 In Development",
+                      "parameters/DynamicProperties/HNZOwner/Claims": "@body('Get_item')?['Owner']?['Claims']",
+                      "parameters/DynamicProperties/NationalID": "@body('Get_item')?['NationalID']",
+                      "parameters/DynamicProperties/Authoriser/Claims": "@body('Get_item')?['Authoriser']?['Claims']",
+                      "parameters/DynamicProperties/Facilitator/Claims": "@body('Get_item')?['Facilitator']?['Claims']",
+                      "parameters/DynamicProperties/ExternalSourceName": "@body('Get_item')?['ExternalSourceName']",
+                      "parameters/DynamicProperties/Facility": "@body('Get_item')?['Facility']",
+                      "parameters/DynamicProperties/RegisterID": "@body('Get_item')?['ID']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewDocumentSet",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  }
+                },
+                "Update_Document_Set_Metadata_-_Te_Waipounamu": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "id": "@body('Create_new_document_set_-_Te_Waipounamu')?['ID']",
+                      "item/HNZRegion": [
+                        {
+                          "Value": "@body('Get_item')?['HNZRegion']?['Value']"
+                        }
+                      ],
+                      "item/HNZLocalArea": [
+                        {
+                          "Value": "@body('Get_item')?['Local_x0020_Area']?['Value']"
+                        }
+                      ],
+                      "item/HNZDocumentType/Value": "@body('Create_new_document_set_-_Te_Waipounamu')?['HNZDocumentType']?['Value']",
+                      "item/HNZBusinessUnit/Value": "@body('Create_new_document_set_-_Te_Waipounamu')?['HNZBusinessUnit']?['Value']",
+                      "item/Appliesto/Value": "@body('Get_item')?['Appliesto']?['Value']"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchFileItem",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_new_document_set_-_Te_Waipounamu": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Update_item_in_Register_-_Te_Waipounamu": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000577",
+                      "table": "e0df1008-187e-45ce-b28f-c806a15003bc",
+                      "id": "@body('Get_item')?['ID']",
+                      "item/Title": "@body('Get_item')?['Title']",
+                      "item/Link_x0020_to_x0020_Working_x002": "@body('Create_new_document_set_-_Te_Waipounamu')?['{Link}']",
+                      "item/Status/Value": "New Document",
+                      "item/Work_x0020_Area_x0020_Created": true
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "PatchItem",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Te_Waipounamu_-_Grant_Permissions_-_Owner": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "07cd5518-9d12-44e4-a98a-1ff76f7798da"
+                  }
+                },
+                "Te_Waipounamu_-_Break_Inheritance": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Waipounamu')?['ID']})/breakroleinheritance(copyRoleAssignments=false,clearSubscopes=true)\n"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_Document_Set_Metadata_-_Te_Waipounamu": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Te_Waipounamu_-_Get_Owner": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Owner']?['Email']}')"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Condition_3-copy_2": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Te_Waipounamu_-_Grant_Permissions_-_Owner": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Waipounamu')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Te_Waipounamu_-_Get_Owner')['d']['id']}, roleDefId =1073741830)"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Te_Waipounamu_-_Get_Owner": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Correspondence'_-_Te_Waipounamu": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Implementation'_-_Te_Waipounamu": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Consultation'_-_Te_Waipounamu": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Consultation"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Correspondence'_-_Te_Waipounamu": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Authorisations'_-_Te_Waipounamu": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Authorisations"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Consultation'_-_Te_Waipounamu": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Feedback'_-_Te_Waipounamu": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Correspondence/Feedback"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Create_Folder_'Authorisations'_-_Te_Waipounamu": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_Folder_'Implementation'_-_Te_Waipounamu": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                      "table": "2d6d4a07-1b06-48a8-84c2-91a681d8c046",
+                      "parameters/path": "@{body('Get_item')?['Title']} - @{body('Get_item')?['ID']}/Implementation"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "operationId": "CreateNewFolder",
+                      "connectionName": "shared_sharepointonline-1"
+                    }
+                  },
+                  "runAfter": {
+                    "Update_item_in_Register_-_Te_Waipounamu": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Condition_2-copy_2": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@body('Get_item')?['Authoriser']?['Email']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Te_Waipounamu_-_Get_Authoriser": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Authoriser']?['Email']}')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline"
+                        }
+                      }
+                    },
+                    "Te_Waipounamu_-_Grant_Permissions_-_Authoriser": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Waipounamu')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Te_Waipounamu_-_Get_Authoriser')['d']['id']}, roleDefId =1073741830)"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Te_Waipounamu_-_Get_Authoriser": [
+                          "SUCCEEDED"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Te_Waipounamu_-_Break_Inheritance": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Condition_3-copy_2": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "equals": [
+                            "@body('Get_item')?['Facilitator']?['Email']",
+                            "@null"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Te_Waipounamu_-_Get_Facilitator": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/SiteUsers/getByEmail('@{body('Get_item')?['Facilitator']?['Email']}')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      }
+                    },
+                    "Te_Waipounamu_-_Grant_Permissions_-_Facilitator": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "dataset": "https://hauoraaotearoa.sharepoint.com/sites/1000662",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/lists/getByTitle('Documents')/items(@{body('Create_new_document_set_-_Te_Waipounamu')?['ID']})/roleassignments/addroleassignment(principalid = @{body('Te_Waipounamu_-_Get_Facilitator')['d']['id']}, roleDefId =1073741830)"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "connectionName": "shared_sharepointonline-1"
+                        }
+                      },
+                      "runAfter": {
+                        "Te_Waipounamu_-_Get_Facilitator": [
+                          "SUCCEEDED"
+                        ]
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  },
+                  "runAfter": {
+                    "Condition_2-copy_2": [
+                      "SUCCEEDED"
+                    ]
+                  }
+                }
+              },
+              "case": "Te Waipounamu - South Island"
+            }
+          },
+          "runAfter": {
+            "Initialize_variable_-_Local_Area": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_variable_-_Local_Area": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varLocalArea",
+                "type": "string",
+                "value": "@body('Get_item')?['Local_x0020_Area']?['Label']"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_-_Region": [
+              "Succeeded"
+            ]
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}
