@@ -14,7 +14,8 @@ jobs:
     uses: ./.github/workflows/release-solution-to-prod-with-inputs.yml
     with:
       #You can specify the solution name here
-      solution_name: ALMLab
+      #solution_name: ALMLab
+      solution_name: HNZControlledDocumentsTemp-20241025-0104
       #Update your values here
       BUILD_ENVIRONMENT_URL: https://orgfa9936a1.crm6.dynamics.com
       PRODUCTION_ENVIRONMENT_URL: https://org05b8b3eb.crm6.dynamics.com
